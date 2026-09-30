@@ -1,0 +1,11 @@
+# Entorno virtual de Python
+venv/
+.venv/
+env/
+
+# Archivos temporales y caché de Python
+__pycache__/
+*.pyc
+
+# Claves y secretos locales (nunca subirlos a GitHub)
+.streamlit/secrets.toml
