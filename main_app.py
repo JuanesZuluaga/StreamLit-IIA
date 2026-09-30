@@ -18,10 +18,8 @@ def get_pastel_color(token_id):
     r, g, b = colorsys.hls_to_rgb(hue, 0.8, 0.6)
     return f"rgb({int(r*255)}, {int(g*255)}, {int(b*255)})"
 
-# --- OBTENCIÓN DE API KEY (Secrets de Streamlit o Sidebar) ---
+# --- OBTENCIÓN DE API KEY ---
 api_key = None
-
-# Intenta obtener la API Key desde los Secretos de Streamlit Cloud
 if "GROQ_API_KEY" in st.secrets:
     api_key = st.secrets["GROQ_API_KEY"]
 
@@ -29,7 +27,6 @@ if "GROQ_API_KEY" in st.secrets:
 with st.sidebar:
     st.title("⚙️ Configuración")
     
-    # Si no hay API Key en secrets, la solicita en la barra lateral
     if not api_key:
         api_key = st.text_input("Ingresa tu API Key de Groq", type="password")
         if not api_key:
@@ -39,9 +36,16 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("### Parámetros de Generación")
+    
+    # Modelos activos y soportados actualmente por Groq
     groq_model = st.selectbox(
         "Modelo de Groq", 
-        ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"]
+        [
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768",
+            "qwen-2.5-72b-instruct"
+        ]
     )
     temperature = st.slider("Temperatura", 0.0, 2.0, 0.7, 0.1)
     max_tokens = st.slider("Max Tokens", 100, 4000, 1024, 100)
@@ -97,21 +101,32 @@ with tab_token:
         
         st.write(f"**Total de tokens:** {len(tokens)}")
         
-        html_content = "<div style='line-height: 2.5;'>"
+        # Generamos bloques HTML sin saltos de línea para evitar problemas de escape en Streamlit
+        spans = []
         for t_id in tokens:
-            token_str = enc.decode([t_id]).replace('<', '&lt;').replace('>', '&gt;')
+            token_str = (
+                enc.decode([t_id])
+                .replace('<', '&lt;')
+                .replace('>', '&gt;')
+                .replace('\n', '↵ ')
+            )
             color = get_pastel_color(t_id)
             
-            html_content += f"""
-            <span style='background-color: {color}; padding: 4px 8px; border-radius: 4px; margin: 2px; 
-                         font-family: monospace; color: black; border: 1px solid #ccc;'
-                  title='Token ID: {t_id}'>
-                {token_str} <sub style='color:#555; font-size:0.6em;'>{t_id}</sub>
-            </span>
-            """
-        html_content += "</div>"
+            span_html = (
+                f"<span style='background-color: {color}; padding: 4px 8px; border-radius: 6px; "
+                f"margin: 3px; display: inline-block; font-family: monospace; color: #111111; "
+                f"border: 1px solid #bbbbbb;' title='Token ID: {t_id}'>"
+                f"{token_str} <sub style='color:#555; font-size:0.65em;'>{t_id}</sub></span>"
+            )
+            spans.append(span_html)
         
-        st.markdown(html_content, unsafe_allow_html=True)
+        html_container = f"<div style='line-height: 2.8; font-size: 1.05em;'>{''.join(spans)}</div>"
+        
+        # Uso de st.html para garantizar el renderizado limpio de los colores
+        if hasattr(st, "html"):
+            st.html(html_container)
+        else:
+            st.markdown(html_container, unsafe_allow_html=True)
 
 # ----------------- TAB 3: SIMILITUD COSENO (EMBEDDINGS) -----------------
 with tab_embed:
